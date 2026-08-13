@@ -1,0 +1,43 @@
+<launch>
+  <arg name="enable_target_publish" default="false"/>
+  <arg name="camera_name" default="/camera/color"/>
+  <arg name="image_topic" default="image_raw"/>
+  <arg name="board_scale" default="1.0"/>
+  <arg name="max_reprojection_error_px" default="3.0"/>
+  <arg name="fresh_s" default="0.10"/>
+  <arg name="short_hold_s" default="0.20"/>
+  <arg name="local_pose_timeout_s" default="0.20"/>
+  <arg name="final_accuracy_window_s" default="1.0"/>
+  <arg name="camera_offset_forward_m" default="0.0"/>
+  <arg name="camera_offset_left_m" default="0.0"/>
+  <arg name="camera_offset_up_m" default="0.0"/>
+  <arg name="log_directory"
+       default="/home/wxh/nb_code/autofly_ws/log/px4_native"/>
+  <arg name="vision_log_path"
+       default="/home/wxh/nb_code/autofly_ws/log/precision_landing_joint_pnp_error.csv"/>
+
+  <include file="$(find precision_landing)/launch/d455_vision_only.launch">
+    <arg name="camera_name" value="$(arg camera_name)"/>
+    <arg name="image_topic" value="$(arg image_topic)"/>
+    <arg name="board_scale" value="$(arg board_scale)"/>
+    <arg name="max_reprojection_error_px"
+         value="$(arg max_reprojection_error_px)"/>
+    <arg name="vision_log_path" value="$(arg vision_log_path)"/>
+  </include>
+
+  <node pkg="precision_landing" type="px4_landing_target_node"
+        name="px4_landing_target" output="screen">
+    <param name="enable_target_publish" value="$(arg enable_target_publish)"/>
+    <param name="fresh_s" value="$(arg fresh_s)"/>
+    <param name="short_hold_s" value="$(arg short_hold_s)"/>
+    <param name="local_pose_timeout_s" value="$(arg local_pose_timeout_s)"/>
+    <param name="final_accuracy_window_s"
+           value="$(arg final_accuracy_window_s)"/>
+    <param name="camera_offset_forward_m"
+           value="$(arg camera_offset_forward_m)"/>
+    <param name="camera_offset_left_m"
+           value="$(arg camera_offset_left_m)"/>
+    <param name="camera_offset_up_m" value="$(arg camera_offset_up_m)"/>
+    <param name="log_directory" value="$(arg log_directory)"/>
+  </node>
+</launch>

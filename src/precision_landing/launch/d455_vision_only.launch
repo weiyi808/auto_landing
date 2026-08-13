@@ -1,0 +1,22 @@
+<launch>
+  <arg name="camera_name" default="/camera/color"/>
+  <arg name="image_topic" default="image_raw"/>
+  <arg name="board_scale" default="1.0"/>
+  <arg name="max_reprojection_error_px" default="3.0"/>
+  <arg name="vision_log_path"
+       default="/home/wxh/nb_code/autofly_ws/log/precision_landing_joint_pnp_error.csv"/>
+
+  <node pkg="precision_landing" type="precision_landing_debug_overlay"
+        name="precision_landing_debug_overlay" output="screen">
+    <remap from="/camera/color/image_raw"
+           to="$(arg camera_name)/$(arg image_topic)"/>
+    <remap from="/camera/color/camera_info"
+           to="$(arg camera_name)/camera_info"/>
+    <param name="guide_kp" value="0.8"/>
+    <param name="guide_max_speed" value="0.25"/>
+    <param name="board_scale" value="$(arg board_scale)"/>
+    <param name="max_reprojection_error_px"
+           value="$(arg max_reprojection_error_px)"/>
+    <param name="log_path" value="$(arg vision_log_path)"/>
+  </node>
+</launch>
