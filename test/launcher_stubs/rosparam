@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "rosparam $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+if [[ "${1:-}" == "get" && "${2:-}" == "/run_id" ]]; then
+  echo test-run-id
+elif [[ "${1:-}" == "get" && "${2:-}" == "/mavros/landing_target/mav_frame" ]]; then
+  echo "${STUB_MAV_FRAME:-LOCAL_NED}"
+else
+  exit 1
+fi

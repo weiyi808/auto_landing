@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "rostopic $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+case "${1:-}" in
+  list)
+    printf '%s\n' /mavros/state /camera/color/image_raw /camera/color/camera_info \
+      /drone_Odometry /mavros/vision_pose/pose /mavros/local_position/pose \
+      /precision_landing/status /precision_landing/px4_native/status
+    ;;
+  echo)
+    topic="${*: -1}"
+    if [[ "$topic" == "/mavros/state" ]]; then
+      printf 'connected: True\narmed: False\nmode: "MANUAL"\n'
+    elif [[ "$topic" == *px4_native/status ]]; then
+      echo 'data: "BLOCKED reason=publishing_disabled"'
+    else
+      echo 'header: {stamp: now}'
+    fi
+    ;;
+  info)
+    echo "Type: geometry_msgs/PoseStamped"
+    echo "Publishers: None"
+    ;;
+  hz)
+    echo "average rate: 15.0"
+    ;;
+  type)
+    echo "std_msgs/String"
+    ;;
+esac

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "rosnode $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+case "${1:-}" in
+  list)
+    printf '%s\n' "${STUB_ROS_NODES:-/rosout}"
+    ;;
+  info)
+    echo "Node [${2:-unknown}]"
+    ;;
+esac

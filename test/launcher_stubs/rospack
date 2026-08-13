@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "rospack $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+if [[ "${1:-}" == "find" && -n "${2:-}" ]]; then
+  echo "/tmp/fake_ros_package/${2}"
+else
+  exit 1
+fi

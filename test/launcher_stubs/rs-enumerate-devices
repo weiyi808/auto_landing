@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "rs-enumerate-devices $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+echo "Serial Number: ${D455_SERIAL:-046322251249}"

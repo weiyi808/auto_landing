@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "tmux $*" >> "${LANDING_LAUNCHER_COMMAND_LOG:?}"
+state_dir="${LANDING_LAUNCHER_STATE_DIR:?}"
+mkdir -p "$state_dir"
+command_name="${1:-}"
+shift || true
+session=""
+previous=""
+for argument in "$@"; do
+  if [[ "$previous" == "-t" || "$previous" == "-s" ]]; then
+    session="${argument%%:*}"
+  fi
+  previous="$argument"
+done
+case "$command_name" in
+  has-session)
+    [[ -f "$state_dir/$session" ]]
+    ;;
+  new-session)
+    : > "$state_dir/$session"
+    ;;
+  list-windows)
+    [[ -f "$state_dir/$session" ]]
+    echo "0: overview"
+    echo "1: mavros"
+    echo "2: d455"
+    echo "3: fastlio"
+    echo "4: vision"
+    echo "5: landing"
+    echo "6: monitor"
+    ;;
+  list-panes)
+    echo "%0 10001"
+    echo "%1 10002"
+    ;;
+  kill-session)
+    rm -f "$state_dir/$session"
+    ;;
+  new-window|send-keys|set-option)
+    ;;
+  *)
+    ;;
+esac
