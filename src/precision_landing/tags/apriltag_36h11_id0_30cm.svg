@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300mm" height="330mm" viewBox="0 0 300 330">
+<rect width="300" height="330" fill="white"/>
+<image x="0" y="0" width="300" height="300" image-rendering="pixelated" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAOElEQVR4XmP4TyRgABMMDHgxikK4TpgEOg3jICtGUYBPIUGrkWmcCtEVY4gjC6BrIKgQHcMVEgMAd4//AS6wxqoAAAAASUVORK5CYII="/>
+<text x="150" y="315" text-anchor="middle" font-family="sans-serif" font-size="9">AprilTag tag36h11 / ID 0 — black square = 300 mm</text>
+</svg>

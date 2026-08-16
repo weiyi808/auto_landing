@@ -4,8 +4,9 @@
   <arg name="image_topic" default="image_raw"/>
   <arg name="board_scale" default="1.0"/>
   <arg name="max_reprojection_error_px" default="3.0"/>
-  <arg name="vision_log_path"
-       default="/home/wxh/nb_code/autofly_ws/log/precision_landing_joint_pnp_error.csv"/>
+  <arg name="vision_log_path" default=""/>
+  <arg name="log_directory"
+       default="/home/wxh/nb_code/autofly_ws/log/companion"/>
 
   <include file="$(find precision_landing)/launch/d455_vision_only.launch">
     <arg name="camera_name" value="$(arg camera_name)"/>
@@ -16,12 +17,8 @@
     <arg name="vision_log_path" value="$(arg vision_log_path)"/>
   </include>
 
-  <group if="$(arg enable_flight)">
-    <node pkg="precision_landing" type="precision_landing_node"
-          name="precision_landing" output="screen">
-      <rosparam command="load"
-                file="$(find precision_landing)/config/precision_landing.yaml"/>
-      <param name="enable_flight" value="true"/>
-    </node>
-  </group>
+  <include file="$(find precision_landing)/launch/precision_landing_control.launch"
+           if="$(arg enable_flight)">
+    <arg name="log_directory" value="$(arg log_directory)"/>
+  </include>
 </launch>

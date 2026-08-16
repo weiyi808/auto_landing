@@ -1,0 +1,10 @@
+standalone_tags:
+  - {id: 10, size: 0.085, name: landing_outer_nw}
+  - {id: 11, size: 0.085, name: landing_outer_ne}
+  - {id: 12, size: 0.085, name: landing_outer_sw}
+  - {id: 13, size: 0.085, name: landing_outer_se}
+  - {id: 20, size: 0.036, name: landing_mid_nw}
+  - {id: 21, size: 0.036, name: landing_mid_ne}
+  - {id: 22, size: 0.036, name: landing_mid_sw}
+  - {id: 23, size: 0.036, name: landing_mid_se}
+  - {id: 0, size: 0.018, name: landing_center}

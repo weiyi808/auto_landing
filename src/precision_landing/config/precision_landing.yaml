@@ -1,1 +1,75 @@
+# 伴随计算机自主降落参数。修改后执行：
+#   ./run_companion_precision_landing.sh restart-landing
+# 只重启降落控制节点并重载本文件，不必 stop 整条链路。
+# 机体系 FRD：x 前、y 右、z 下。起落架不对称：前后 15 cm，左右 23 cm，对角约 28 cm。
+# 前后更短、俯仰更灵敏，所以前向增益和速度上限低于左右。
+# 收尾定死 AUTO.LAND：
+# 1) 高空对准并下降；2) 约 16–18 cm 尽量收到 2 cm，再切 AUTO.LAND；
+# 3) 相机到板 ≤ landed_disarm_height（支架已着地、静置约 7.4 cm）则立刻强制上锁。
+#    着地后水平调不了，不能再等 2 cm。切 LAND 前把 MC_YAWRATE_MAX 压到 1°/s。
+# hold_heading 高处把机头转到二维码页顶（板 -Y / FRONT），采样后锁死 ENU 航向。
+# 速度和航向都发 FRAME_LOCAL_NED：速度先转到 ENU，航向发 ENU（本机 MAVROS 会转成 NED）。
+# 若机头对着码的侧边/后方，把 board_yaw_offset_deg 改成 90 或 180。
+# 每次 OFFBOARD 解锁飞行写入 log/companion/flight_时间.csv；上锁结果追加 log/companion/summary.csv。
+# 视觉观测写入世界系落点（ENU）：有检测时用 EKF 追踪；丢标后用最后估计顶住。
+
 enable_flight: false
+auto_land: true               # 对准后自动收尾
+use_px4_auto_land: true       # 定死：对准后交 AUTO.LAND，不要 OFFBOARD 贴地上锁
+land_yaw_rate_max_dps: 1.0    # 切 LAND 前把 MC_YAWRATE_MAX 压到此值，挡住往北拧
+landed_disarm_height_m: 0.082 # 相机到板低于此值=支架着地，立刻上锁（静置约 7.4 cm）
+landed_disarm_xy_m: 0.12      # 着地后不再卡水平，调不了
+landed_disarm_frames: 3       # 20 Hz → 约 0.15 s
+use_world_anchor: true        # 把每次检测融合成固定世界系落点，不跟瞬时视觉跳变
+
+# --- 世界系落点 EKF：近地观测权重大，野值用新息门限丢掉 ---
+anchor_process_std_xy_mps: 0.035  # 水平随机游走，允许几厘米慢修，不跟单帧野值
+anchor_process_std_z_mps: 0.040
+anchor_meas_std_xy_at_1m: 0.030   # 1 m 高时水平观测噪声，随高度放大
+anchor_meas_std_xy_min_m: 0.008
+anchor_innov_gate_sigma: 3.0      # 水平新息超过该倍数标准差视为野值
+anchor_min_init_height_m: 0.40    # 首次建点必须高于此，避免贴地误建
+anchor_relocate_xy_m: 0.50        # 高空观测离当前点超过该值则重置滤波
+camera_offset_forward_m: 0.0  # 相机相对机体 FLU 前向，米
+camera_offset_left_m: 0.0
+camera_offset_up_m: 0.0
+
+# --- 超时 ---
+tag_timeout_s: 0.20
+vehicle_timeout_s: 0.40       # 过短会把速度打成 0，引起晃动
+
+# --- 水平：前后 / 左右分开（15:23 ≈ 0.65） ---
+align_radius_m: 0.8          # 仅高空（>descend_start）水平大于该值时先对准、不下降
+final_radius_m: 0.020         # 备用水平门限（require_xy_align=false 时用）
+require_xy_align_before_land: true  # 到 final_height 后必须收到稳定点才交 LAND
+land_align_radius_m: 0.01    # 交 LAND 前水平 ≤ 2.2 cm。超时不再用 8 cm 凑合交
+pad_commit_height_m: 0.09    # 低于此高度才不再为对准停降
+floor_align_timeout_frames: 20  # 约 18 cm 处最多等 2 s 收水平
+hold_heading: true            # 高处转到码的前方后锁死航向
+align_heading_to_board: true  # 用板姿态把机头对到页顶/FRONT，而不是锁进入时的朝向
+board_yaw_offset_deg: 0       # 机头反了就改 180
+align_heading_min_height_m: 0.40  # 低于此高度不再更新目标航向
+align_heading_samples: 5      # 高处平均几帧板航向后锁死
+kp_forward: 0.50              # 前向比例。前后轴距短，增益更小，减少过冲
+kp_right: 0.65                # 右向比例。左右更宽，可稍大
+final_kp_forward: 0.28        # 低于 0.35 m：能把 3–4 cm 收回去，又不会像 0.32 那样晃
+final_kp_right: 0.34
+kd_forward: 0.24              # 近地多阻尼，压过冲
+kd_right: 0.22
+max_forward_vel_mps: 0.14     # 前向速度上限，末端少冲
+max_right_vel_mps: 0.18
+min_forward_vel_mps: 0.04
+min_right_vel_mps: 0.05
+min_vel_error_m: 0.06         # 小于 6 cm 只用比例
+xy_deadzone_m: 0.010          # 1.0 cm 内不再推水平
+
+# --- 高度：先在 18 cm 对准，慢降到交接点，偏了先修水平 ---
+descend_start_height_m: 0.80  # 高于此值且水平很偏时才完全停降
+descent_xy_stop_m: 0.05       # 仅高空：水平误差达到该值时下降速度为 0
+commit_height_m: 0.20         # 落点已锁定且低于此高度后不再为对齐停降
+commit_down_vel_mps: 0.28     # 末端慢压。0.20 会在 17 cm 已对准后又冲出 6 cm
+final_height_m: 0.12          # 从 18 cm 开始卡 2 cm，留出稳定时间
+max_down_vel_mps: 0.26
+max_accel_mps2: 0.24          # 水平加速度
+max_z_accel_mps2: 0.55        # 垂直加速度，下降不要阶跃
+final_stable_frames: 6        # 20 Hz → 0.3 s 水平稳住再交 LAND

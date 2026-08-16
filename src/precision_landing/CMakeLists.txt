@@ -26,7 +26,9 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
-add_library(precision_landing_core src/controller_core.cpp)
+add_library(precision_landing_core
+  src/controller_core.cpp
+  src/landing_target_anchor.cpp)
 target_link_libraries(precision_landing_core ${catkin_LIBRARIES})
 
 add_library(precision_landing_px4_native_core src/px4_landing_target_core.cpp)
@@ -56,6 +58,10 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(test_px4_landing_target_core precision_landing_px4_native_core ${catkin_LIBRARIES} gtest_main)
   catkin_add_gtest(test_controller_core test/test_controller_core.cpp)
   target_link_libraries(test_controller_core precision_landing_core ${catkin_LIBRARIES} gtest_main)
+  catkin_add_gtest(test_landing_target_anchor test/test_landing_target_anchor.cpp)
+  target_link_libraries(test_landing_target_anchor precision_landing_core ${catkin_LIBRARIES} gtest_main)
+  catkin_add_gtest(test_heading_from_board test/test_heading_from_board.cpp)
+  target_link_libraries(test_heading_from_board ${catkin_LIBRARIES} gtest_main)
   catkin_add_gtest(test_board_geometry test/test_board_geometry.cpp)
   target_link_libraries(test_board_geometry ${catkin_LIBRARIES} gtest_main)
   catkin_add_gtest(test_board_pose_estimator test/test_board_pose_estimator.cpp)

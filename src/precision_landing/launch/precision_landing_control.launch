@@ -1,0 +1,15 @@
+<launch>
+  <arg name="enable_flight" default="true"/>
+  <arg name="log_directory"
+       default="/home/wxh/nb_code/autofly_ws/log/companion"/>
+
+  <group if="$(arg enable_flight)">
+    <node pkg="precision_landing" type="precision_landing_node"
+          name="precision_landing" output="screen">
+      <rosparam command="load"
+                file="$(find precision_landing)/config/precision_landing.yaml"/>
+      <param name="enable_flight" value="true"/>
+      <param name="log_directory" value="$(arg log_directory)"/>
+    </node>
+  </group>
+</launch>

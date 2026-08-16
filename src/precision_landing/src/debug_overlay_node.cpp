@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Quaternion.h>
 #include <mavros_msgs/PositionTarget.h>
 #include <opencv2/aruco.hpp>
 #include <opencv2/calib3d.hpp>
@@ -32,10 +33,12 @@ class PrecisionLandingVision {
     std::string log_path;
     private_nh_.param<std::string>(
         "log_path", log_path, "/tmp/precision_landing_error.csv");
-    log_.open(log_path, std::ios::app);
-    if (log_ && log_.tellp() == 0) {
-      log_ << "timestamp,tag_count,reprojection_rms_px,forward_m,right_m,down_m,"
-              "error_xy_m,guide_vx,guide_vy,actual_vx,actual_vy,actual_vz,state\n";
+    if (!log_path.empty()) {
+      log_.open(log_path, std::ios::app);
+      if (log_ && log_.tellp() == 0) {
+        log_ << "timestamp,tag_count,reprojection_rms_px,forward_m,right_m,down_m,"
+                "error_xy_m,guide_vx,guide_vy,actual_vx,actual_vy,actual_vz,state\n";
+      }
     }
 
     camera_info_sub_ = nh_.subscribe(
@@ -137,19 +140,26 @@ class PrecisionLandingVision {
     pose.pose.position.x = estimate.tvec[0];
     pose.pose.position.y = estimate.tvec[1];
     pose.pose.position.z = estimate.tvec[2];
-    pose.pose.orientation.w = 1.0;
+    pose.pose.orientation = quaternionFromRvec(estimate.rvec);
     center_pub_.publish(pose);
 
-    const std::vector<cv::Point3d> board_origin{{0.0, 0.0, 0.0}};
-    std::vector<cv::Point2d> projected_origin;
-    cv::projectPoints(board_origin, estimate.rvec, estimate.tvec,
-                      camera_matrix_, distortion_, projected_origin);
-    const cv::Point target(cvRound(projected_origin[0].x),
-                           cvRound(projected_origin[0].y));
+    const std::vector<cv::Point3d> board_axes{
+        {0.0, 0.0, 0.0}, {0.0, -0.08, 0.0}};
+    std::vector<cv::Point2d> projected_axes;
+    cv::projectPoints(board_axes, estimate.rvec, estimate.tvec, camera_matrix_,
+                      distortion_, projected_axes);
+    const cv::Point target(cvRound(projected_axes[0].x),
+                           cvRound(projected_axes[0].y));
+    const cv::Point front(cvRound(projected_axes[1].x),
+                          cvRound(projected_axes[1].y));
     cv::circle(view, target, 17, cv::Scalar(0, 0, 255), -1);
     cv::circle(view, target, 23, cv::Scalar(255, 255, 255), 2);
+    cv::arrowedLine(view, target, front, cv::Scalar(0, 255, 255), 3, cv::LINE_AA,
+                    0, 0.25);
     cv::putText(view, "ID0 TARGET", target + cv::Point(25, -20),
                 cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(0, 0, 255), 2);
+    cv::putText(view, "FRONT", front + cv::Point(8, 8),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 255), 2);
 
     const double forward = -estimate.tvec[1];
     const double right = estimate.tvec[0];
@@ -210,6 +220,48 @@ class PrecisionLandingVision {
     output.step = view.cols * 3;
     output.data.assign(view.data, view.data + view.total() * view.elemSize());
     debug_pub_.publish(output);
+  }
+
+  static geometry_msgs::Quaternion quaternionFromRvec(const cv::Vec3d& rvec) {
+    cv::Mat rotation;
+    cv::Rodrigues(rvec, rotation);
+    geometry_msgs::Quaternion quaternion;
+    const double m00 = rotation.at<double>(0, 0);
+    const double m01 = rotation.at<double>(0, 1);
+    const double m02 = rotation.at<double>(0, 2);
+    const double m10 = rotation.at<double>(1, 0);
+    const double m11 = rotation.at<double>(1, 1);
+    const double m12 = rotation.at<double>(1, 2);
+    const double m20 = rotation.at<double>(2, 0);
+    const double m21 = rotation.at<double>(2, 1);
+    const double m22 = rotation.at<double>(2, 2);
+    const double trace = m00 + m11 + m22;
+    if (trace > 0.0) {
+      const double scale = 0.5 / std::sqrt(trace + 1.0);
+      quaternion.w = 0.25 / scale;
+      quaternion.x = (m21 - m12) * scale;
+      quaternion.y = (m02 - m20) * scale;
+      quaternion.z = (m10 - m01) * scale;
+    } else if (m00 > m11 && m00 > m22) {
+      const double scale = 0.5 / std::sqrt(1.0 + m00 - m11 - m22);
+      quaternion.w = (m21 - m12) * scale;
+      quaternion.x = 0.25 / scale;
+      quaternion.y = (m01 + m10) * scale;
+      quaternion.z = (m02 + m20) * scale;
+    } else if (m11 > m22) {
+      const double scale = 0.5 / std::sqrt(1.0 + m11 - m00 - m22);
+      quaternion.w = (m02 - m20) * scale;
+      quaternion.x = (m01 + m10) * scale;
+      quaternion.y = 0.25 / scale;
+      quaternion.z = (m12 + m21) * scale;
+    } else {
+      const double scale = 0.5 / std::sqrt(1.0 + m22 - m00 - m11);
+      quaternion.w = (m10 - m01) * scale;
+      quaternion.x = (m02 + m20) * scale;
+      quaternion.y = (m12 + m21) * scale;
+      quaternion.z = 0.25 / scale;
+    }
+    return quaternion;
   }
 
   static void drawText(cv::Mat& image, const std::string& text, int y,

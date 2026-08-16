@@ -53,6 +53,7 @@ run_variant() {
   local session="$2"
   local launch="$3"
   local enable_name="$4"
+  local layout="$5"
 
   [[ -x "$REPO_ROOT/$script" ]] || fail "$script is missing or not executable"
 
@@ -64,6 +65,10 @@ run_variant() {
   assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "roslaunch fly_utils px4_pos_estimator.launch"
   assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "$launch"
   assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "$enable_name:=true"
+  if [[ "$layout" == "split" ]]; then
+    assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "d455_vision_only.launch"
+    assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "precision_landing_control.launch"
+  fi
   for prohibited in exploration_manager ego_planner px4_replan_sender auto_control pubcmd; do
     assert_not_contains "$LANDING_LAUNCHER_COMMAND_LOG" "$prohibited"
   done
@@ -74,9 +79,14 @@ run_variant() {
 
   : > "$LANDING_LAUNCHER_COMMAND_LOG"
   "$REPO_ROOT/$script" test
-  assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "$enable_name:=false"
   assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "mapping_mid360andmaping.launch"
   assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "px4_pos_estimator.launch"
+  if [[ "$layout" == "split" ]]; then
+    assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "d455_vision_only.launch"
+    assert_not_contains "$LANDING_LAUNCHER_COMMAND_LOG" "precision_landing_control.launch"
+  else
+    assert_contains "$LANDING_LAUNCHER_COMMAND_LOG" "$enable_name:=false"
+  fi
 
   : > "$LANDING_LAUNCHER_COMMAND_LOG"
   "$REPO_ROOT/$script" status
@@ -94,8 +104,8 @@ run_variant() {
 }
 
 run_variant run_companion_precision_landing.sh landing_companion \
-  d455_companion_precision_landing.launch enable_flight
+  precision_landing_control.launch enable_flight split
 run_variant run_px4_native_precision_landing.sh landing_px4_native \
-  d455_px4_native_precision_landing.launch enable_target_publish
+  d455_px4_native_precision_landing.launch enable_target_publish combined
 
 echo "PASS: complete landing launcher contract"

@@ -8,7 +8,8 @@ MID360。提供两套互斥的精准降落方案：
 
 两个完整启动脚本都包含飞控连接、D455、MID360/FAST-LIO、定位传输和
 AprilTag 检测，但不会启动 Falcon/Ego 探索规划、`px4_replan_sender`、
-`auto_control` 或 `pubcmd`。脚本不会自动解锁、切换模式或调用 LAND。
+`auto_control` 或 `pubcmd`。脚本不会自动解锁或切换 OFFBOARD；伴随控制方案到达
+终点后会由 `precision_landing` 节点请求 `AUTO.LAND`，PX4 原生方案仍只发布目标。
 
 > 两套方案不能同时运行。解锁和飞行模式切换始终由飞行员手动完成。
 
@@ -71,8 +72,12 @@ cd /home/wxh/nb_code/autofly_ws
 ```bash
 ./run_companion_precision_landing.sh status
 tmux attach -t landing_companion
+./run_companion_precision_landing.sh restart-landing
 ./run_companion_precision_landing.sh stop
 ```
+
+修改 `precision_landing.yaml` 后可使用 `restart-landing` 只重启视觉和降落控制节点，
+保持 MAVROS、D455、FAST-LIO 和外部视觉定位继续运行。
 
 ## 方案二：PX4 v1.12 原生精准降落
 
@@ -135,15 +140,25 @@ rostopic info /mavros/landing_target/pose
 
 ## 日志位置
 
-### AprilTag 联合 PnP 检测日志
+### 伴随控制逐次飞行日志
+
+```text
+/home/wxh/nb_code/autofly_ws/log/companion/flight_YYYYMMDD_HHMMSS.csv
+/home/wxh/nb_code/autofly_ws/log/companion/summary.csv
+```
+
+飞机解锁并进入 OFFBOARD 后创建逐帧文件，上锁时向 `summary.csv` 追加一行，记录
+最终和最小水平误差、请求 AUTO.LAND 时的误差、控制参数及详细日志文件路径。
+
+### 可选的 AprilTag 联合 PnP 检测日志
 
 ```text
 /home/wxh/nb_code/autofly_ws/log/precision_landing_joint_pnp_error.csv
 ```
 
-主要字段包括：时间、有效 Tag 数量、重投影 RMS、前/右/下方向偏差、水平误差、
-引导速度、实际 BODY_NED 控制量和检测状态。伴随与 PX4 原生方案共用这份视觉
-检测日志。
+该文件仅在 launch 参数 `vision_log_path` 非空时生成；当前伴随方案默认关闭独立
+视觉日志，避免持续产生大文件。字段包括时间、有效 Tag 数量、重投影 RMS、
+前/右/下方向偏差、水平误差、引导速度、实际 BODY_NED 控制量和检测状态。
 
 ### PX4 原生降落逐帧日志
 
